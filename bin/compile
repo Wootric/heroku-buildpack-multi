@@ -2,6 +2,10 @@
 
 set -e
 
+BUILD_DIR=${1:-}
+CACHE_DIR=${2:-}
+ENV_DIR=${3:-}
+
 YELLOW='\033[1;33m'
 RESET='\033[0m'
 
@@ -13,7 +17,28 @@ function indent() {
   esac
 }
 
+export_env_dir() {
+  env_dir=$1
+  acceptlist_regex=${2:-''}
+  denylist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d "$env_dir" ]; then
+    for e in $(ls $env_dir); do
+      echo "$e" | grep -E "$acceptlist_regex" | grep -qvE "$denylist_regex" &&
+      export "$e=$(cat $env_dir/$e)"
+      :
+    done
+  fi
+}
+
+function load_google_credentials() {
+  echo "$GOOGLE_CREDENTIALS" > "$GOOGLE_APPLICATION_CREDENTIALS"
+  echo "=====> Google Credentials Loaded: $GOOGLE_APPLICATION_CREDENTIALS"
+}
+
 unset GIT_DIR
+
+export_env_dir "$ENV_DIR"
+load_google_credentials
 
 for BUILDPACK in $(cat $1/.buildpacks); do
   dir=$(mktemp -t buildpackXXXXX)
